@@ -10,7 +10,7 @@ export async function buildPublicSite({releasePath=path.join(root,'private/publi
  await fs.mkdir(output,{recursive:true});
  for(const name of await fs.readdir(path.join(root,'web')))await fs.copyFile(path.join(root,'web',name),path.join(output,name));
  await fs.writeFile(path.join(output,'config.js'),"// Deliberately reviewed public snapshot only.\nexport const config = {snapshotUrl:'./published.json',autoLoad:true};\n");
- const html=await fs.readFile(path.join(output,'index.html'),'utf8');await fs.writeFile(path.join(output,'index.html'),html.replace('Private itinerary','Our itinerary').replace('<title>Our itinerary</title>','<title>Sydney · Our itinerary</title>').replace('<h1>Our trip.</h1>','<h1>Sydney.</h1>'));
+ const html=await fs.readFile(path.join(output,'index.html'),'utf8');await fs.writeFile(path.join(output,'index.html'),html.replace('Private itinerary','Our itinerary').replace('<span class="private-label"><span data-icon="lock"','<span class="private-label"><span data-icon="route"').replace('<title>Our itinerary</title>','<title>Sydney · Our itinerary</title>').replace('<h1>Our trip.</h1>','<h1>Sydney.</h1>'));
  await fs.writeFile(path.join(output,'published.json'),JSON.stringify({rows:release.rows,publishedAt:release.publishedAt}));
  await fs.writeFile(path.join(output,'.nojekyll'),'');
  return output;
