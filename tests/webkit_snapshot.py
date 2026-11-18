@@ -12,7 +12,7 @@ async def ready():
         except OSError:await asyncio.sleep(.1)
     raise RuntimeError('Fixture server not ready')
 async def main():
-    errors=[];checks=[]
+    errors=[];checks=[];api_calls=[]
     with tempfile.TemporaryDirectory(dir=ROOT/'private') as directory:
         folder=pathlib.Path(directory);shutil.copytree(ROOT/'web',folder/'site');(folder/'site/api').mkdir()
         target=folder/'site/api/published'
@@ -23,7 +23,7 @@ async def main():
         async with async_playwright() as p:
             profile=folder/'profile'
             async def context():return await p.webkit.launch_persistent_context(str(profile),**{k:v for k,v in p.devices['iPhone 13'].items() if k!='default_browser_type'})
-            c=await context();page=c.pages[0];page.on('pageerror',lambda e:errors.append(str(e)))
+            c=await context();page=c.pages[0];page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda request:api_calls.append({'url':request.url,'method':request.method}) if '/api/' in request.url or 'sheets.googleapis.com' in request.url else None)
             try:
                 await page.goto('http://127.0.0.1:4187');await page.click('#connect');await page.wait_for_selector('.card-title-button')
                 await page.wait_for_function('navigator.serviceWorker.controller !== null')
@@ -46,7 +46,7 @@ async def main():
                 assert not any('/api/' in x for x in keys)
                 assert await page.evaluate('Object.keys(localStorage).every(k=>k==="itinerary-colour-theme")')
                 print('closing online context',flush=True);await asyncio.wait_for(c.close(),15);process.terminate();process.wait();print('server stopped',flush=True)
-                c=await context();page=c.pages[0];page.on('pageerror',lambda e:errors.append(str(e)));print('cold context open',flush=True)
+                c=await context();page=c.pages[0];page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda request:api_calls.append({'url':request.url,'method':request.method}) if '/api/' in request.url or 'sheets.googleapis.com' in request.url else None);print('cold context open',flush=True)
                 await page.goto('http://127.0.0.1:4187');await page.wait_for_selector('.card-title-button')
                 assert 'Newer' in await page.locator('.card h3').inner_text()
                 print('cold data restored',await page.locator('#status').inner_text(),flush=True);await page.wait_for_function('document.querySelector("#status").textContent.includes("Offline")');await c.set_offline(True);print('offline interaction',flush=True)
@@ -59,7 +59,9 @@ async def main():
                 await page.click('#signout');await page.wait_for_function('document.querySelector("#status").textContent.includes("cleared")');await page.reload();assert await page.locator('.card-title-button').count()==0
                 checks.append('Clear saved survives reload without private fixture; OS reduced motion respected')
                 assert not errors,errors
-                (OUT/'report.json').write_text(json.dumps({'checks':checks,'errors':errors,'limits':'Synthetic publication fixture; WebKit emulation, not physical iPhone/Home Screen'},indent=2));print(json.dumps(checks))
+                assert api_calls and all(call['method']=='GET' and '/api/published' in call['url'] for call in api_calls),api_calls
+                checks.append('Refresh/online recovery issue only GET published-snapshot requests, never Sheet writes or draft publication')
+                (OUT/'report.json').write_text(json.dumps({'checks':checks,'errors':errors,'apiCalls':api_calls,'limits':'Synthetic publication fixture; WebKit emulation, not physical iPhone/Home Screen'},indent=2));print(json.dumps(checks))
             except Exception:
                 (OUT/'failure.html').write_text(await page.content())
                 (OUT/'failure.json').write_text(json.dumps({'errors':errors,'state':await page.evaluate('''async()=>({status:document.querySelector('#status')?.textContent,controller:!!navigator.serviceWorker.controller,registrations:(await navigator.serviceWorker.getRegistrations()).length,dbs:await indexedDB.databases(),caches:await Promise.all((await caches.keys()).map(async name=>({name,keys:(await (await caches.open(name)).keys()).map(r=>r.url)})))})''')},indent=2))
