@@ -7,7 +7,7 @@ async def main():
     errors=[];checks=[]
     async with async_playwright() as p:
         browser=await p.webkit.launch()
-        for theme in ['blush','cobalt']:
+        for theme in ['plum','cobalt']:
             c=await browser.new_context(**p.devices['iPhone 13'])
             page=await c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
             await page.goto('http://127.0.0.1:4175/#itinerary');await page.wait_for_selector('.card')

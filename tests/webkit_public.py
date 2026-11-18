@@ -16,7 +16,7 @@ async def main():
         try:
             async with async_playwright() as p:
                 browser=await p.webkit.launch()
-                for theme in ['blush','cobalt']:
+                for theme in ['plum','cobalt']:
                     for width in [320,390,1100]:
                         c=await browser.new_context(viewport={'width':width,'height':844});page=await c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
                         await page.goto('http://127.0.0.1:4188/sydney-itinerary/');await page.wait_for_function('document.querySelector("#status").textContent.startsWith("Published snapshot")')

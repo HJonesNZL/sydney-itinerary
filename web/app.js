@@ -1,21 +1,22 @@
-import {config} from './config.js?v=2026111907';
-import {fromRows,localLabel} from './model.js?v=2026111907';
-import {weatherForDay} from './weather.js?v=2026111907';
-import {readSavedSnapshot,saveSnapshot,clearSavedSnapshot,prepareOfflineShell} from './offline.js?v=2026111907';
+import {config} from './config.js?v=2026111908';
+import {fromRows,localLabel} from './model.js?v=2026111908';
+import {weatherForDay} from './weather.js?v=2026111908';
+import {readSavedSnapshot,saveSnapshot,clearSavedSnapshot,prepareOfflineShell} from './offline.js?v=2026111908';
 const $=s=>document.querySelector(s);
 // Visual preference uses localStorage; private snapshots use IndexedDB, never tokens.
 function setTheme(theme){
  const cobalt=theme==='cobalt';
- document.documentElement.dataset.theme=cobalt?'cobalt':'blush';
+ document.documentElement.dataset.theme=cobalt?'cobalt':'plum';
  $('#theme-toggle').setAttribute('aria-pressed',String(cobalt));
- $('#theme-toggle').setAttribute('aria-label',cobalt?'Switch to Blush palette':'Switch to Cobalt and apricot palette');
- $('#theme-toggle').title=cobalt?'Switch to Blush':'Switch to Cobalt and apricot';
- $('#theme-name').textContent=cobalt?'Cobalt':'Blush';
- document.querySelector('meta[name="theme-color"]').content=cobalt?'#efe5d8':'#fffafa';
+ $('#theme-toggle').setAttribute('aria-label',cobalt?'Switch to Plum and sage palette':'Switch to Cobalt and apricot palette');
+ $('#theme-toggle').title=cobalt?'Switch to Plum':'Switch to Cobalt and apricot';
+ $('#theme-name').textContent=cobalt?'Cobalt':'Plum';
+ document.querySelector('meta[name="theme-color"]').content=cobalt?'#efe5d8':'#eeeeee';
 }
 setTheme(document.documentElement.dataset.theme);
+try { if(localStorage.getItem('itinerary-colour-theme')==='blush')localStorage.setItem('itinerary-colour-theme','plum'); } catch {}
 $('#theme-toggle').onclick=()=>{
- const next=document.documentElement.dataset.theme==='cobalt'?'blush':'cobalt';
+ const next=document.documentElement.dataset.theme==='cobalt'?'plum':'cobalt';
  setTheme(next);
  try { localStorage.setItem('itinerary-colour-theme',next); } catch {}
 };

@@ -28,7 +28,7 @@ async def main():
                 await page.goto('http://127.0.0.1:4187');await page.click('#connect');await page.wait_for_selector('.card-title-button')
                 await page.wait_for_function('navigator.serviceWorker.controller !== null')
                 assert await page.locator('.weather-value').inner_text()=='26/18°C'
-                for theme in ['blush','cobalt']:
+                for theme in ['plum','cobalt']:
                     if theme=='cobalt':await page.click('#theme-toggle')
                     for width in [320,390]:
                         await page.set_viewport_size({'width':width,'height':844})

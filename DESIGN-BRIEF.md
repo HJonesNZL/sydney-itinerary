@@ -48,3 +48,7 @@ Day navigation uses a cancellable eased journey lasting 360–620ms according to
 Buttons compress on pointer/key down in 85ms and release with a restrained 220ms spring. The navigation animates its backing rather than its text. New presses replace old feedback. View changes update the live content immediately, then use a 240ms fade and tiny settle; no action waits for the animation. Captured View Transitions are no longer used, avoiding blank intermediate frames in WebKit. Search reveals in 160ms. Native details use a quick fade and rotating chevron; their height is not animated, preserving browser scroll anchoring and history positions.
 
 Soft radial gradients replace large live blur filters in the ambient background. The small bottom navigation keeps its frosted treatment. Frame traces confirmed that the previous background filters were slowing the scripted scroll in the WebKit harness; no real-device frame-rate claim is made.
+
+
+##19November2026—Plum replaces Blush
+Latest user image explicitly replaces Blush with BlackRussian#000215,ChineseViolet#70566D,DarkPurple#42273B,AshGrey#ADC8C0,LightGreen#9EE493,Whisper#EEEEEE. Default is now Plum:lightWhispersurfaces,deepplumfilledcards,sage/limeaccentsandambientgradients. Allfourviews/dialogs/controls/appiconmustfollowthispalette. Cobalt remains the alternate, with its existing computed colours unchanged. Legacyblushpreference migrates toPlum. This supersedes the earlierdefaultBlushpalette directives above.

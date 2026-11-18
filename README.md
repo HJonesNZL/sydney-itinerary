@@ -2,7 +2,7 @@
 
 [Open the public itinerary](https://hjonesnzl.github.io/sydney-itinerary/)
 
-A mobile itinerary with Blush and Cobalt palettes, smooth day navigation, Apple Maps links, trip notes, a Pets corner and saved offline access after the first online load.
+A mobile itinerary with Plum and Cobalt palettes, smooth day navigation, Apple Maps links, trip notes, a Pets corner and saved offline access after the first online load.
 
 The site is public and requires no account or passcode. The Google Sheet remains private; the public deployment contains the full main-itinerary snapshot explicitly approved for sharing. Credentials and unrelated research drafts are excluded.
 

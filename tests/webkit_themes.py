@@ -12,12 +12,12 @@ async def main():
             page=await c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
             await page.goto('http://127.0.0.1:4175/#itinerary');await page.wait_for_selector('.card')
             titles=await page.locator('.card h3').all_text_contents()
-            assert await page.locator('html').get_attribute('data-theme')=='blush'
+            assert await page.locator('html').get_attribute('data-theme')=='plum'
             await page.tap('#theme-toggle')
             assert await page.locator('html').get_attribute('data-theme')=='cobalt'
             assert await page.locator('#theme-toggle').get_attribute('aria-pressed')=='true'
             assert await page.locator('#theme-name').inner_text()=='Cobalt'
-            for view in ['itinerary','budget','notes']:
+            for view in ['itinerary','budget','pets','notes']:
                 await page.tap('[data-view='+view+']');await page.wait_for_timeout(350)
                 assert await page.evaluate('document.documentElement.scrollWidth===innerWidth')
                 await page.screenshot(path=str(out/f'cobalt-{width}-{height}-{view}.png'),full_page=True)
@@ -27,10 +27,10 @@ async def main():
             assert await page.locator('html').get_attribute('data-theme')=='cobalt'
             assert await page.locator('meta[name="theme-color"]').get_attribute('content')=='#efe5d8'
             await page.locator('#theme-toggle').focus();await page.keyboard.press('Enter')
-            assert await page.locator('html').get_attribute('data-theme')=='blush'
+            assert await page.locator('html').get_attribute('data-theme')=='plum'
             assert await page.locator('#theme-toggle').get_attribute('aria-pressed')=='false'
             await page.reload();await page.wait_for_selector('#notes-view:visible')
-            assert await page.locator('html').get_attribute('data-theme')=='blush'
+            assert await page.locator('html').get_attribute('data-theme')=='plum'
             assert await page.evaluate('Object.keys(localStorage)')==['itinerary-colour-theme']
             checks.append(f'{width}x{height}: cobalt in all views, unchanged plans, keyboard toggle and reload persistence')
             await c.close()
@@ -42,8 +42,16 @@ async def main():
         assert await page.locator('html').get_attribute('data-theme')=='cobalt'
         assert await page.evaluate('document.getAnimations().length')==0
         await page.reload();await page.wait_for_selector('.card')
-        assert await page.locator('html').get_attribute('data-theme')=='blush'
+        assert await page.locator('html').get_attribute('data-theme')=='plum'
         checks.append('blocked storage falls back safely; reduced-motion theme switch has no animation')
+        c=await browser.new_context(**p.devices['iPhone 13'])
+        await c.add_init_script("localStorage.setItem('itinerary-colour-theme','blush')")
+        page=await c.new_page();await page.goto('http://127.0.0.1:4175/');await page.wait_for_selector('.card')
+        assert await page.locator('html').get_attribute('data-theme')=='plum'
+        assert await page.evaluate("localStorage.getItem('itinerary-colour-theme')")=='plum'
+        assert await page.locator('#theme-name').inner_text()=='Plum'
+        checks.append('legacy Blush preference migrates to Plum without losing the alternate palette')
+        await c.close()
         await browser.close()
     report={'browser':'WebKit','errors':errors,'checks':checks}
     (out/'report.json').write_text(json.dumps(report,indent=2));print(json.dumps(report,indent=2))
