@@ -1,7 +1,7 @@
-import {config} from './config.js?v=2026111906';
-import {fromRows,localLabel} from './model.js?v=2026111906';
-import {weatherForDay} from './weather.js?v=2026111906';
-import {readSavedSnapshot,saveSnapshot,clearSavedSnapshot,prepareOfflineShell} from './offline.js?v=2026111906';
+import {config} from './config.js?v=2026111907';
+import {fromRows,localLabel} from './model.js?v=2026111907';
+import {weatherForDay} from './weather.js?v=2026111907';
+import {readSavedSnapshot,saveSnapshot,clearSavedSnapshot,prepareOfflineShell} from './offline.js?v=2026111907';
 const $=s=>document.querySelector(s);
 // Visual preference uses localStorage; private snapshots use IndexedDB, never tokens.
 function setTheme(theme){
@@ -22,7 +22,7 @@ $('#theme-toggle').onclick=()=>{
 
 let current=[],activeView='itinerary',screenAnimation=null,navigationVersion=0;
 let dataVersion=0,lastSync='',savedKind='published',offlineDetected=false,detailItem=null,detailTrigger=null;
-const views=new Set(['itinerary','budget','notes']);
+const views=new Set(['itinerary','budget','notes','pets']);
 const scrollPositions=new Map();
 const systemMotion=matchMedia('(prefers-reduced-motion: reduce)');
 let lessMotion=systemMotion.matches;
@@ -126,6 +126,7 @@ $('#motion').onclick=()=>{lessMotion=!lessMotion;updateMotion();if(motionOff()){
 function money(n){return new Intl.NumberFormat('en-NZ',{style:'currency',currency:'NZD'}).format(n).replace('$','NZ$');}
 function totalCost(item){return item.cost*(item.basis==='Per person'?2:1);}
 const ICONS={
+ paw:['M8.5 13.5c-1.4 1.7-3.5 2.9-3.5 5 0 1.9 1.9 3 3.7 2.2a7.4 7.4 0 0 1 6.6 0c1.8.8 3.7-.3 3.7-2.2 0-2.1-2.1-3.3-3.5-5a4.3 4.3 0 0 0-7 0Z','M6 7.5a2 2.5 0 1 1-4 0 2 2.5 0 1 1 4 0M11 4.5a2 2.5 0 1 1-4 0 2 2.5 0 1 1 4 0M17 4.5a2 2.5 0 1 1-4 0 2 2.5 0 1 1 4 0M22 7.5a2 2.5 0 1 1-4 0 2 2.5 0 1 1 4 0'],
  sun:['M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4','M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0'],
  lock:['M7 10V7a5 5 0 0 1 10 0v3','M5 10h14v11H5z','M12 14v3'],
  arrow:['M6 18 18 6M6 6h12v12'],
