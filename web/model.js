@@ -1,5 +1,5 @@
-import {parseItemDetails,readBlock} from './details.js?v=2026111905';
-import {forecastFromRows} from './weather.js?v=2026111905';
+import {parseItemDetails,readBlock} from './details.js?v=2026111906';
+import {forecastFromRows} from './weather.js?v=2026111906';
 function publishedCost(value){
  const text=value==null?'':String(value).trim();
  if(!text)return {cost:undefined,approx:false};

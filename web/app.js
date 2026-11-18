@@ -1,7 +1,7 @@
-import {config} from './config.js?v=2026111905';
-import {fromRows,localLabel} from './model.js?v=2026111905';
-import {weatherForDay} from './weather.js?v=2026111905';
-import {readSavedSnapshot,saveSnapshot,clearSavedSnapshot,prepareOfflineShell} from './offline.js?v=2026111905';
+import {config} from './config.js?v=2026111906';
+import {fromRows,localLabel} from './model.js?v=2026111906';
+import {weatherForDay} from './weather.js?v=2026111906';
+import {readSavedSnapshot,saveSnapshot,clearSavedSnapshot,prepareOfflineShell} from './offline.js?v=2026111906';
 const $=s=>document.querySelector(s);
 // Visual preference uses localStorage; private snapshots use IndexedDB, never tokens.
 function setTheme(theme){
@@ -205,7 +205,7 @@ function render(items,{draft=false}={}){
    const flight=item.transport?.toLowerCase()==='flight'&&item.end,route=el('div',null,'route'+(flight?' flight-route':''));
    for(const [index,[place,time,zone]] of [[item.from,item.start,item.zone],[item.to,item.end,item.endZone]].entries()){
     if(!time)continue;if(flight&&index===1)route.append(icon('plane'));const stop=el('div',null,'stop');
-    if(!flight){const location=el('div',null,'stop-location');location.append(icon('pin'),el('strong',place||'The plan'));stop.append(location);}else stop.append(el('strong',place||'The plan'));
+    if(!flight){const location=el('div',null,'stop-location');const name=item.stops?.length===1?el('a',place||'The plan','location-map-link'):el('strong',place||'The plan');if(item.stops?.length===1){name.href=item.stops[0].url;name.target='_blank';name.rel='noopener noreferrer';name.setAttribute('aria-label',(place||item.title)+' · open in Apple Maps');}location.append(icon('pin'),name);stop.append(location);}else stop.append(el('strong',place||'The plan'));
     stop.append(el('span',item.untimed?'Flexible timing':localLabel(time,zone)));
     if(item.untimed&&item.endDate&&item.endDate!==item.start.slice(0,10))stop.append(el('span','Through '+shortDate(item.endDate,{weekday:'short',day:'numeric',month:'short'})));
     route.append(stop);
@@ -230,7 +230,7 @@ function openItem(item,trigger){
  $('#item-dialog-meta').textContent=(item.confirmed?'Confirmed':'Tentative')+' · '+(item.untimed?'Flexible timing':localLabel(item.start,item.zone))+(item.detailsSummary?' · '+item.detailsSummary:'');
  const root=$('#item-stops');root.replaceChildren();const list=el('ul',null,'stops-list');
  function row(stop){const li=el('li');if(stop.children?.length){const group=el('div',null,'stop-group');group.append(el('strong',stop.name),el('small',stop.address));li.append(group);const children=el('ul',null,'stop-branches');for(const child of stop.children)children.append(row(child));li.append(children);}else{const link=el('a',null,'stop-link');link.href=stop.url;link.target='_blank';link.rel='noopener noreferrer';const text=el('span');text.append(el('strong',stop.name),el('small',[stop.address,stop.hint,stop.mapStatus==='place'?'':stop.mapStatus==='address'?'Address pin':'Search link'].filter(Boolean).join(' · ')));link.append(text,icon('arrow'));li.append(link);}return li;}
- for(const stop of item.stops)list.append(row(stop));root.append(list);$('#item-more').open=false;
+ for(const stop of item.stops)list.append(row(stop));root.append(list);if(item.notes||item.transport||item.link){const planning=el('details',null,'planning-notes'),summary=el('summary','Planning notes');planning.append(summary);if(item.transport)planning.append(el('p','Getting there · '+item.transport));if(item.notes)planning.append(el('p',item.notes));if(item.link){try{const url=new URL(item.link);if(url.protocol==='https:'){const link=el('a','Open related page');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';planning.append(link);}}catch{}}root.append(planning);}$('#item-more').open=false;
  history.pushState({...history.state,itemDialog:true},'',location.href);$('#item-dialog').showModal();
  if(!motionOff())$('#item-dialog').animate([{opacity:.7,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration:180,easing:'ease-out'});
 }
@@ -256,4 +256,5 @@ prepareOfflineShell().then(()=>navigator.serviceWorker.controller?.postMessage({
 const initialVersion=dataVersion;const saved=await readSavedSnapshot();
 if(initialVersion===dataVersion){if(saved?.rows){try{current=fromRows(saved.rows);snapshotStored=true;lastSync=saved.syncedAt;savedKind=saved.kind||'published';render(current,{draft:savedKind==='local-review'});$('#signout').hidden=false;$('#signout').textContent='Clear saved';$('#refresh').hidden=false;$('#status').textContent=savedStatus();}catch{render(sample);}}else render(sample);}
 
-if(lastSync&&savedKind!=='local-review')refresh();
+if(config.autoLoad&&!lastSync){render([]);$('#plan .empty-note').textContent='Loading your itinerary…';}
+if(config.autoLoad||(lastSync&&savedKind!=='local-review'))refresh();

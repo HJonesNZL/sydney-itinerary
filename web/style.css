@@ -1260,3 +1260,10 @@ button,summary,a,input { scroll-margin-bottom:110px; }
 html[data-theme=cobalt] #item-dialog { background:#f7f0e5; border-color:#fff6e9; }
 html[data-theme=cobalt] .stop-link .icon { color:var(--cobalt); }
 @media(max-width:350px) { #item-dialog { padding:18px; } .item-dialog-head h2 { font-size:21px; } }
+
+.connection-footer { margin-top:32px; padding-top:20px; border-top:1px solid var(--line); }
+.connection-footer .status { margin-bottom:0; overflow-wrap:anywhere; }
+
+.location-map-link { color:inherit; font-weight:600; text-decoration:underline; text-decoration-color:var(--muted); text-underline-offset:3px; }
+.planning-notes { margin-top:18px; }
+.planning-notes p { white-space:pre-line; line-height:1.6; font-size:.85rem; overflow-wrap:anywhere; }

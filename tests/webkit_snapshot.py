@@ -32,7 +32,7 @@ async def main():
                     if theme=='cobalt':await page.click('#theme-toggle')
                     for width in [320,390]:
                         await page.set_viewport_size({'width':width,'height':844})
-                        await page.click('.card-title-button');await page.click('#item-more summary')
+                        await page.click('.card-title-button');await page.click('#item-more > summary')
                         assert await page.locator('#item-stops a').count()==2
                         assert await page.locator('#item-stops').evaluate('(e)=>e.scrollWidth<=e.clientWidth+1')
                         await page.screenshot(path=str(OUT/(theme+'-'+str(width)+'.png')))
@@ -50,7 +50,7 @@ async def main():
                 await page.goto('http://127.0.0.1:4187');await page.wait_for_selector('.card-title-button')
                 assert 'Newer' in await page.locator('.card h3').inner_text()
                 print('cold data restored',await page.locator('#status').inner_text(),flush=True);await page.wait_for_function('document.querySelector("#status").textContent.includes("Offline")');await c.set_offline(True);print('offline interaction',flush=True)
-                await page.click('.card-title-button');await page.click('#item-more summary');assert await page.locator('#item-stops a').count()==2
+                await page.click('.card-title-button');await page.click('#item-more > summary');assert await page.locator('#item-stops a').count()==2
                 await page.click('#item-dialog-close');await page.wait_for_function('!document.querySelector("#item-dialog").open')
                 checks.append('cold WebKit reopen offline with origin server stopped retains details/weather')
                 print('recovering',flush=True);process=server();publish('Recovered online shopping',30);await ready();await c.set_offline(False);await page.click('#refresh');await page.wait_for_function('document.querySelector(".weather-value").textContent==="30/18°C"')
