@@ -1,4 +1,4 @@
-import {readBlock} from './details.js?v=2026111906';
+import {readBlock} from './details.js?v=2026111907';
 export const WEATHER_ZONES={sydney:{name:'Sydney',latitude:-33.8688,longitude:151.2093},copacabana:{name:'Copacabana',latitude:-33.48692,longitude:151.43587}};
 export function weatherLocation(items,date){
  const stays=items.filter(i=>i.start.slice(0,10)<=date&&i.endDate>=date&&i.endDate>i.start.slice(0,10)&&/beach|coast|copacabana|killcare/i.test(i.title+' '+i.from));
