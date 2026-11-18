@@ -1,5 +1,5 @@
 /* One pure snapshot calculation shared by Apps Script and verification. */
-function itinerarySnapshot(source) {
+function itinerarySnapshot(source, options={}) {
  const ids=new Set();const output=[];
  for(const raw of source){
   if(!raw[0])continue;
@@ -23,6 +23,10 @@ function itinerarySnapshot(source) {
   }
   r[19]=raw[19]===true||raw[19]==='TRUE';output.push(r);
  }
- return output.sort((a,b)=>(a[1]+(a[2]||'99:99:99')).localeCompare(b[1]+(b[2]||'99:99:99')));
+ const sorted=output.sort((a,b)=>(a[1]+(a[2]||'99:99:99')).localeCompare(b[1]+(b[2]||'99:99:99')));
+ // Weather is frozen with this publication, never fetched independently by the viewer.
+ for(const row of sorted)row[8]=String(row[8]||'').replace(/\s*\[itinerary-weather:v1\][\s\S]*?\[\/itinerary-weather\]/g,'').trim();
+ if(sorted.length&&options.weather)sorted[0][8]+='\n\n[itinerary-weather:v1]\n'+JSON.stringify(options.weather)+'\n[/itinerary-weather]';
+ return sorted;
 }
 function validLocal(value){if(typeof value!=='string'||!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/.test(value))return false;const d=new Date(value+'Z');return !isNaN(d)&&d.toISOString().slice(0,19)===value;}

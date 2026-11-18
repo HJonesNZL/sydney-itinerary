@@ -1,7 +1,9 @@
-import {config} from './config.js?v=2026111904';
-import {fromRows,localLabel} from './model.js?v=2026111904';
+import {config} from './config.js?v=2026111905';
+import {fromRows,localLabel} from './model.js?v=2026111905';
+import {weatherForDay} from './weather.js?v=2026111905';
+import {readSavedSnapshot,saveSnapshot,clearSavedSnapshot,prepareOfflineShell} from './offline.js?v=2026111905';
 const $=s=>document.querySelector(s);
-// Persist only the visual preference, never itinerary values or authorization tokens.
+// Visual preference uses localStorage; private snapshots use IndexedDB, never tokens.
 function setTheme(theme){
  const cobalt=theme==='cobalt';
  document.documentElement.dataset.theme=cobalt?'cobalt':'blush';
@@ -17,8 +19,9 @@ $('#theme-toggle').onclick=()=>{
  setTheme(next);
  try { localStorage.setItem('itinerary-colour-theme',next); } catch {}
 };
-const SHEETS_READ_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
-let token='',expires=0,current=[],activeView='itinerary',screenAnimation=null,navigationVersion=0;
+
+let current=[],activeView='itinerary',screenAnimation=null,navigationVersion=0;
+let dataVersion=0,lastSync='',savedKind='published',offlineDetected=false,detailItem=null,detailTrigger=null;
 const views=new Set(['itinerary','budget','notes']);
 const scrollPositions=new Map();
 const systemMotion=matchMedia('(prefers-reduced-motion: reduce)');
@@ -114,7 +117,7 @@ function showView(name,{historyMode='push',force=false}={}){
   animation.finished.catch(()=>{}).finally(()=>{if(screenAnimation===animation)screenAnimation=null;});
  }
 }
-addEventListener('popstate',()=>showView(location.hash.slice(1),{historyMode:'none',force:true}));
+addEventListener('popstate',()=>{if($('#item-dialog').open){$('#item-dialog').close();detailItem=null;detailTrigger?.focus({preventScroll:true});return;}showView(location.hash.slice(1),{historyMode:'none',force:true});});
 addEventListener('hashchange',()=>showView(location.hash.slice(1),{historyMode:'none'}));
 activeView=views.has(location.hash.slice(1))?location.hash.slice(1):'itinerary';applyView(activeView);
 addEventListener('resize',()=>{cancelDayJump();if(screenAnimation){screenAnimation.cancel();screenAnimation=null;}applyView(activeView);});
@@ -145,16 +148,23 @@ const ICONS={
  circle:['M19 12a7 7 0 1 1-14 0 7 7 0 0 1 14 0'],
  chevron:['m7 10 5 5 5-5'],
  phone:['M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z','M10 18h4M10 5h4'],
+ cloud:['M6 18a4 4 0 0 1-1-8 7 7 0 0 1 13-1 4.5 4.5 0 0 1 0 9z'],
+ rain:['M5 14a3 3 0 0 1 0-6 6 6 0 0 1 11-1 3.5 3.5 0 0 1 1 7','m8 17-1 3m6-3-1 3m6-3-1 3'],
+ snow:['M12 3v18M4 7l16 10M4 17 20 7M9 5l3 2 3-2M9 19l3-2 3 2'],
+ storm:['M5 14a3 3 0 0 1 0-6 6 6 0 0 1 11-1 3.5 3.5 0 0 1 1 7','m13 12-4 5h4l-2 5 6-8h-4z'],
  sheet:['M5 3h14v18H5z','M5 8h14M5 13h14M5 17h14M10 8v13']
 };
 function icon(name){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','icon');svg.setAttribute('aria-hidden','true');for(const d of ICONS[name]||ICONS.pin){const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',d);svg.append(path);}return svg;}
 for(const node of document.querySelectorAll('[data-icon]'))node.append(icon(node.dataset.icon));
 function activityIcon(item){const text=[item.title,item.transport,item.from].join(' ').toLowerCase();if(item.transport?.toLowerCase()==='flight')return 'plane';if(/cruise|harbour|sailing/.test(text))return 'boat';if(/opera|concert|theatre|music/.test(text))return 'music';if(/beach|coast/.test(text))return 'sun';if(/zoo|encounter|garden|park/.test(text))return 'leaf';if(/shop|store/.test(text))return 'bag';if(/food|market|lunch|dinner|cafe/.test(text))return 'food';return 'pin';}
 let selectedDay='';
+let snapshotStored=false;
 const dateObject=date=>new Date(date+'T12:00:00Z');
 function shortDate(date,options={day:'numeric',month:'short'}){return new Intl.DateTimeFormat('en-AU',{timeZone:'UTC',...options}).format(dateObject(date));}
 function renderDates(items){
  const root=$('#date-strip');root.replaceChildren();if(!items.length)return;
+ const forecast=items.find(i=>i.snapshotWeather)?.snapshotWeather;
+ $('#forecast-asof').textContent=forecast?' · forecast saved '+new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Sydney',day:'numeric',month:'short'}).format(new Date(forecast.fetchedAt)):'';
  const first=items[0].start.slice(0,10),last=items.map(i=>i.endDate||i.start.slice(0,10)).sort().at(-1);
  $('#trip-dates').textContent=shortDate(first)+' – '+shortDate(last,{day:'numeric',month:'short',year:'numeric'});
  const start=dateObject(first),finish=dateObject(last),days=Math.round((finish-start)/86400000)+1;
@@ -164,7 +174,10 @@ function renderDates(items){
   const date=new Date(start.getTime()+n*86400000).toISOString().slice(0,10),count=counts.get(date)||0;
   const ongoing=items.filter(i=>i.start.slice(0,10)<date&&i.endDate>=date);
   const button=el('button',null,'date-chip'+(!count&&!ongoing.length?' empty':''));button.dataset.date=date;button.setAttribute('aria-label',shortDate(date,{weekday:'long',day:'numeric',month:'long'})+' · '+(count?count+' plan'+(count===1?'':'s')+' starting':'No plans starting')+(ongoing.length?' · '+ongoing.length+' ongoing':''));
-  button.setAttribute('aria-pressed',String(date===selectedDay));button.append(el('span',shortDate(date,{weekday:'short'}).slice(0,1)),el('strong',String(Number(date.slice(-2)))),el('span',null,'date-dot'));
+  button.setAttribute('aria-pressed',String(date===selectedDay));button.append(el('span',shortDate(date,{weekday:'short'}).slice(0,1)),el('strong',String(Number(date.slice(-2)))));
+  const weather=weatherForDay(forecast,items,date),badge=el('span',null,'day-weather');
+  if(weather.available){badge.append(icon(weather.icon),el('span',weather.high+'/'+weather.low+'°C','weather-value'));button.title=weather.location+' · '+weather.label+' · high '+weather.high+'°C, low '+weather.low+'°C · forecast saved '+weather.asOf;}else{badge.textContent='—';badge.classList.add('weather-na');button.title=weather.label;}
+  button.setAttribute('aria-label',button.getAttribute('aria-label')+' · '+button.title);button.append(badge);
   button.onclick=()=>{selectedDay=date;for(const b of root.children)b.setAttribute('aria-pressed',String(b.dataset.date===date));$('#overview-title').textContent=shortDate(date,{weekday:'long',day:'numeric',month:'short'});$('#overview-detail').textContent=count+' starting'+(ongoing.length?' · '+ongoing.length+' ongoing':'');const day=document.getElementById('day-'+date)||document.getElementById('day-'+ongoing[0]?.start.slice(0,10));if(day){if($('#search').value){$('#search').value='';filterPlans();}jumpToDay(day);}else{$('#overview-title').textContent=shortDate(date,{weekday:'long',day:'numeric',month:'short'});$('#overview-detail').textContent='No plans this day. Keep it flexible.';}};
   root.append(button);
  }
@@ -176,7 +189,7 @@ $('#search').oninput=filterPlans;$('#search-clear').onclick=()=>{$('#search').va
 $('#search').onkeydown=e=>{if(e.key==='Escape'){$('#search-panel').hidden=true;$('#search-toggle').setAttribute('aria-expanded','false');$('#search').value='';filterPlans();$('#search-toggle').focus();}};
 function renderBudget(items,{draft=false}={}){
  const root=$('#budget');root.replaceChildren();const known=items.filter(i=>i.cost!==undefined&&Number.isFinite(i.cost)),total=known.reduce((s,i)=>s+totalCost(i),0);
- const top=el('article',null,'budget-total');top.append(el('span',draft?'Draft costs':token?'Known costs':'Sample preview','eyebrow'),el('strong',known.length?money(total):'Costs to come.'),el('p',`${known.some(i=>i.approx)?'Approximate total. ':''}${items.length-known.length} item(s) unpriced. Includes tentative ideas; this is not a committed-spend total.`));root.append(top);
+ const top=el('article',null,'budget-total');top.append(el('span',draft?'Draft costs':lastSync?'Known costs':'Sample preview','eyebrow'),el('strong',known.length?money(total):'Costs to come.'),el('p',`${known.some(i=>i.approx)?'Approximate total. ':''}${items.length-known.length} item(s) unpriced. Includes tentative ideas; this is not a committed-spend total.`));root.append(top);
  if(known.length)root.append(el('p','Included in the total','budget-caption'));
  for(const item of known){const row=el('article',null,'budget-row'),name=el('div');name.append(el('strong',item.title),el('small',`${item.confirmed?'Confirmed':'Tentative'} · ${item.payment||'Payment not noted'}${item.basis==='Per person'?' · two people':' · stated total'}`));row.append(name,el('span',(item.approx?'≈ ':'')+money(totalCost(item))));root.append(row);}
  if(known.length)root.append(el('p','Converted AUD estimates use the dated rate frozen at publish. Unknown prices are excluded.','status'));
@@ -188,7 +201,7 @@ function render(items,{draft=false}={}){
   const day=el('section',null,'day');day.id='day-'+date;const heading=el('div',null,'day-heading'),label=el('div',null,'day-label');label.append(el('strong',shortDate(date,{weekday:'long'})),el('span',shortDate(date)));heading.append(label,el('span',dayItems.length+' plan'+(dayItems.length===1?'':'s'),'day-count'));day.append(heading);
   for(const item of dayItems){
    const timeline=el('div',null,'timeline-item'),marker=el('span',null,'activity-icon');marker.setAttribute('aria-hidden','true');marker.append(icon(activityIcon(item)));const card=el('article',null,'card '+(item.confirmed?'confirmed':'tentative'));card.dataset.search=[item.title,item.from,item.to,item.notes,item.transport].join(' ').toLocaleLowerCase();
-   const head=el('div',null,'card-head'),tag=el('span',null,'tag');tag.append(icon(item.confirmed?'check':'circle'),document.createTextNode(item.confirmed?'Confirmed':'Tentative'));head.append(tag);if(item.payment)head.append(el('span',item.payment,'payment'));card.append(head,el('h3',item.title));
+   const head=el('div',null,'card-head'),tag=el('span',null,'tag');tag.append(icon(item.confirmed?'check':'circle'),document.createTextNode(item.confirmed?'Confirmed':'Tentative'));head.append(tag);if(item.payment)head.append(el('span',item.payment,'payment'));card.append(head);const title=el('h3');if(item.stops?.length){const open=el('button',item.title,'card-title-button');open.setAttribute('aria-haspopup','dialog');open.onclick=()=>openItem(item,open);title.append(open);card.onclick=e=>{if(!e.target.closest('button,a,summary,input,details'))openItem(item,open);};}else title.textContent=item.title;card.append(title);
    const flight=item.transport?.toLowerCase()==='flight'&&item.end,route=el('div',null,'route'+(flight?' flight-route':''));
    for(const [index,[place,time,zone]] of [[item.from,item.start,item.zone],[item.to,item.end,item.endZone]].entries()){
     if(!time)continue;if(flight&&index===1)route.append(icon('plane'));const stop=el('div',null,'stop');
@@ -198,7 +211,7 @@ function render(items,{draft=false}={}){
     route.append(stop);
    }
    card.append(route,el('p',item.cost!==undefined?`${item.approx?'Approximately ':''}${money(item.cost)} · ${item.basis||'Total'}${item.approx?' · rate dated '+item.rateDate:''}`:'Price not added','price'));
-   if(item.notes||item.transport||item.link){
+   if(!item.stops?.length&&(item.notes||item.transport||item.link)){
     const detail=el('details'),summary=el('summary','Details & links');summary.append(icon('chevron'));detail.append(summary);const body=el('div');
     if(item.transport)body.append(el('p','Getting there · '+item.transport));if(item.notes)body.append(el('p',item.notes));
     if(item.link){try{const u=new URL(item.link);if(u.protocol==='https:'){const a=el('a','Open booking / map');a.append(icon('arrow'));a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';body.append(a);}}catch{}}
@@ -208,11 +221,39 @@ function render(items,{draft=false}={}){
   }
   root.append(day);
  }
- root.append(el('p',!items.length?'No published plans yet. Add ideas to the sheet, then publish.':draft?'Unpublished draft · changes stay in the Sheet until publishing.':token?'Edit your plans in the Google Sheet.':'Sample content · sign in to load your itinerary.','empty-note'));
+ root.append(el('p',!items.length?'No published plans yet. Add ideas to the sheet, then publish.':draft?'Unpublished draft · changes stay in the Sheet until publishing.':lastSync?'Saved published plans.':'Sample content · open the published itinerary to load your plans.','empty-note'));
  renderBudget(items,{draft});filterPlans();
 }
-async function refresh(){if(!token||Date.now()>=expires){signout();$('#status').textContent='Sign in again to refresh your private itinerary.';return;}$('#refresh').disabled=true;try{const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.spreadsheetId)}/values/Published!A1%3AT1000`;const res=await fetch(url,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});if(!res.ok)throw new Error(res.status===403?'This Google account does not have sheet access.':res.status===401?'Your sign-in expired. Sign out and reconnect.':'Could not load the published snapshot.');const data=await res.json();current=fromRows(data.values||[]);render(current);$('#status').textContent='Published snapshot · checked '+new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Sydney',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(new Date())+' · Scratch drafts stay in the sheet.';}catch(e){$('#status').textContent=e.message+' '+(current.length?'Keeping the last successfully loaded view.':'');}finally{$('#refresh').disabled=false;}}
-function signout(){token='';expires=0;current=[];render(sample);$('#connect').hidden=false;$('#refresh').hidden=true;$('#signout').hidden=true;$('#edit').hidden=true;$('#status').textContent='Signed out · sample content only';}
-$('#connect').onclick=()=>{if(!config.clientId||!config.spreadsheetId){$('#status').textContent='Private setup needed: configure Google sign-in and the sheet. This preview contains sample content only.';return;}if(!window.google?.accounts?.oauth2){$('#status').textContent='Google sign-in is still loading. Check your connection and try again.';return;}const client=google.accounts.oauth2.initTokenClient({client_id:config.clientId,scope:SHEETS_READ_SCOPE,include_granted_scopes:false,callback:r=>{if(r.error){$('#status').textContent='Google sign-in was not completed.';return;}if(!r.access_token||!Number.isFinite(Number(r.expires_in))||Number(r.expires_in)<=0||!google.accounts.oauth2.hasGrantedAllScopes(r,SHEETS_READ_SCOPE)){$('#status').textContent='Google Sheets read access was not granted. Reconnect to try again.';return;}token=r.access_token;expires=Date.now()+Number(r.expires_in)*1000;$('#connect').hidden=true;$('#refresh').hidden=false;$('#signout').hidden=false;$('#edit').href=`https://docs.google.com/spreadsheets/d/${encodeURIComponent(config.spreadsheetId)}/edit`;$('#edit').hidden=false;refresh();},error_callback:()=>$('#status').textContent='Sign-in window closed. Try again in Safari.'});client.requestAccessToken();};
-$('#refresh').onclick=refresh;$('#signout').onclick=signout;
-document.addEventListener('visibilitychange',()=>{updateMotion();if(!document.hidden&&token)refresh();});render(sample);
+function openItem(item,trigger){
+ cancelDayJump();detailItem=item;detailTrigger=trigger;
+ $('#item-dialog-title').textContent=item.title;
+ $('#item-dialog-meta').textContent=(item.confirmed?'Confirmed':'Tentative')+' · '+(item.untimed?'Flexible timing':localLabel(item.start,item.zone))+(item.detailsSummary?' · '+item.detailsSummary:'');
+ const root=$('#item-stops');root.replaceChildren();const list=el('ul',null,'stops-list');
+ function row(stop){const li=el('li');if(stop.children?.length){const group=el('div',null,'stop-group');group.append(el('strong',stop.name),el('small',stop.address));li.append(group);const children=el('ul',null,'stop-branches');for(const child of stop.children)children.append(row(child));li.append(children);}else{const link=el('a',null,'stop-link');link.href=stop.url;link.target='_blank';link.rel='noopener noreferrer';const text=el('span');text.append(el('strong',stop.name),el('small',[stop.address,stop.hint,stop.mapStatus==='place'?'':stop.mapStatus==='address'?'Address pin':'Search link'].filter(Boolean).join(' · ')));link.append(text,icon('arrow'));li.append(link);}return li;}
+ for(const stop of item.stops)list.append(row(stop));root.append(list);$('#item-more').open=false;
+ history.pushState({...history.state,itemDialog:true},'',location.href);$('#item-dialog').showModal();
+ if(!motionOff())$('#item-dialog').animate([{opacity:.7,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration:180,easing:'ease-out'});
+}
+function closeItem(){if(!$('#item-dialog').open)return;if(history.state?.itemDialog)history.back();else{$('#item-dialog').close();detailItem=null;detailTrigger?.focus({preventScroll:true});}}
+$('#item-dialog-close').onclick=closeItem;$('#item-dialog').addEventListener('cancel',e=>{e.preventDefault();closeItem();});
+function savedStatus(){if(!lastSync)return navigator.onLine?'Sample preview · open published itinerary':'Offline · open online once to save your plans';const time=new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Sydney',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}).format(new Date(lastSync));return (!navigator.onLine||offlineDetected?'Offline':'Saved')+' · synced '+time+(savedKind==='local-review'?' · local review':'')+(snapshotStored?'':' · offline storage unavailable');}
+function connectivity(){$('#status').textContent=savedStatus();}
+addEventListener('offline',connectivity);addEventListener('online',()=>{offlineDetected=false;if(lastSync)refresh();else connectivity();});
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='shell-offline'||(e.data?.type==='shell-status'&&e.data.offline)){offlineDetected=true;connectivity();}});
+async function acceptSavedRows(rows,{kind='published',syncedAt=new Date().toISOString()}={}){const version=dataVersion;const items=fromRows(rows);current=items;lastSync=syncedAt;savedKind=kind;render(items,{draft:kind==='local-review'});try{await saveSnapshot(rows,{kind,syncedAt});snapshotStored=true;}catch{snapshotStored=false;}if(version!==dataVersion)return;$('#signout').hidden=false;$('#signout').textContent='Clear saved';$('#status').textContent=savedStatus();}
+async function refresh(){
+ const version=++dataVersion;$('#refresh').disabled=true;
+ try{const url=new URL(config.snapshotUrl,location.href);if(!config.snapshotUrl||url.origin!==location.origin)throw new Error('Local publication setup pending.');
+  const res=await fetch(url,{cache:'no-store',credentials:'omit'});
+  if(!res.ok)throw new Error('Published itinerary unavailable.');
+  const data=await res.json();const rows=data.rows;fromRows(rows);if(version!==dataVersion)return;offlineDetected=false;await acceptSavedRows(rows,{syncedAt:data.publishedAt||new Date().toISOString()});if(version===dataVersion){$('#connect').hidden=true;$('#refresh').hidden=false;$('#status').textContent='Published snapshot · '+savedStatus().toLowerCase();}
+ }catch(e){if(e instanceof TypeError)offlineDetected=true;if(version===dataVersion)$('#status').textContent=lastSync?savedStatus()+' · refresh unavailable':e.message;}finally{if(version===dataVersion)$('#refresh').disabled=false;}
+}
+async function signout(){++dataVersion;current=[];lastSync='';offlineDetected=false;closeItem();snapshotStored=false;const cleared=clearSavedSnapshot();render(sample);$('#connect').hidden=false;$('#refresh').hidden=true;$('#signout').hidden=true;$('#edit').hidden=true;$('#status').textContent='Clearing saved itinerary…';try{await cleared;$('#status').textContent='Saved itinerary cleared from this browser';}catch{$('#status').textContent='Could not clear saved plans. Remove this site’s data in Safari settings.';}}
+$('#connect').onclick=refresh;$('#refresh').onclick=refresh;$('#signout').onclick=signout;
+document.addEventListener('visibilitychange',()=>{updateMotion();if(!document.hidden&&lastSync)refresh();});
+prepareOfflineShell().then(()=>navigator.serviceWorker.controller?.postMessage({type:'shell-status'}));
+const initialVersion=dataVersion;const saved=await readSavedSnapshot();
+if(initialVersion===dataVersion){if(saved?.rows){try{current=fromRows(saved.rows);snapshotStored=true;lastSync=saved.syncedAt;savedKind=saved.kind||'published';render(current,{draft:savedKind==='local-review'});$('#signout').hidden=false;$('#signout').textContent='Clear saved';$('#refresh').hidden=false;$('#status').textContent=savedStatus();}catch{render(sample);}}else render(sample);}
+
+if(lastSync&&savedKind!=='local-review')refresh();

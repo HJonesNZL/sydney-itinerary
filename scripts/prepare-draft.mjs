@@ -22,14 +22,18 @@ html=html.replace(/<script src="https:\/\/accounts\.google\.com\/gsi\/client" as
 await fs.writeFile(path.join(dest,'index.html'),html);
 await fs.writeFile(path.join(dest,'draft-data.json'),JSON.stringify(rows));
 const app=(await fs.readFile(path.join(dest,'app.js'),'utf8')).replace(/\.js\?v=\d+/g,'.js?v='+stamp);
+const savedPublished=source.mode==='published'&&!source.reviewUnpublished;
 const extension=`
 // This extension exists only in ignored private/draft, never in web/.
 if(!['127.0.0.1','localhost'].includes(location.hostname))throw new Error('Draft preview is localhost only.');
-const draftRows=await (await fetch('./draft-data.json',{cache:'no-store'})).json();
-render(fromRows(draftRows),{draft:true});
-$('#status').textContent=${JSON.stringify(source.mode==='published'?'Private app draft · saved Published snapshot':'Private draft · not published')};
-$('#plan .empty-note').textContent=${JSON.stringify(source.mode==='published'?'Saved Published snapshot · Sheet edits appear after the next publish.':'Unpublished draft · changes stay in the Sheet until publishing.')};
-$('#budget .eyebrow').textContent=${JSON.stringify(source.mode==='published'?'Known costs':'Draft costs')};
+try {
+const response=await fetch('./draft-data.json',{cache:'no-store'});if(!response.ok)throw new Error('Preview unavailable');
+const draftRows=await response.json();
+await acceptSavedRows(draftRows,{kind:'local-review'});
+$('#status').textContent=${JSON.stringify(savedPublished?'Private app draft · saved Published snapshot':'Private draft · not published')};
+$('#plan .empty-note').textContent=${JSON.stringify(savedPublished?'Saved Published snapshot · Sheet edits appear after the next publish.':'Unpublished draft · changes stay in the Sheet until publishing.')};
+$('#budget .eyebrow').textContent=${JSON.stringify(savedPublished?'Known costs':'Draft costs')};
+}catch {$('#status').textContent=savedStatus();}
 $('#connect').replaceChildren(document.createTextNode('Open Google Sheet'),icon('arrow'));
 $('#connect').onclick=()=>window.open(${JSON.stringify(source.sheetUrl)},'_blank','noopener');
 $('#edit').href=${JSON.stringify(source.sheetUrl)};$('#edit').hidden=false;

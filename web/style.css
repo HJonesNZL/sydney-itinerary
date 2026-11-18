@@ -1230,3 +1230,33 @@ button,summary,a,input { scroll-margin-bottom:110px; }
 @media(prefers-reduced-motion:no-preference) {
  .card summary .icon,.disclosure-icon { transition:transform .18s cubic-bezier(.2,.8,.2,1); }
 }
+
+/* Forecast stays within the existing compact day controls. */
+.date-chip { gap:2px; padding-top:7px; padding-bottom:6px; }
+.day-weather { display:grid; justify-items:center; align-content:center; gap:1px; min-height:23px; color:inherit; }
+.day-weather .icon { width:11px; height:11px; stroke-width:1.7; }
+.weather-value { font-size:8px; line-height:10px; white-space:nowrap; font-variant-numeric:tabular-nums; letter-spacing:-.15px; }
+.day-weather.weather-na { font-size:13px; opacity:.55; }
+.weather-source { font-size:10px; color:var(--muted); margin:18px 3px; }
+.weather-source a { color:inherit; min-height:44px; display:inline-flex; align-items:center; }
+.card-title-button { font:inherit; letter-spacing:inherit; color:inherit; min-height:44px; padding:0; border:0!important; background:transparent!important; box-shadow:none!important; text-align:left; border-radius:6px; }
+#item-dialog { width:min(560px,calc(100% - 24px)); max-height:85vh; max-height:85dvh; overflow-y:auto; overscroll-behavior:contain; border:1px solid #fff; border-radius:27px; padding:22px; background:var(--paper); color:var(--ink); box-shadow:0 24px 80px #30272235; }
+#item-dialog::backdrop { background:#30273465; }
+.item-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.item-dialog-head h2 { font-size:23px; }
+#item-dialog-meta { margin:8px 0 14px; }
+#item-more>summary { display:flex; justify-content:space-between; align-items:center; cursor:pointer; min-height:46px; list-style:none; border-bottom:1px solid var(--line); font-size:13px; }
+#item-more>summary::-webkit-details-marker { display:none; }
+#item-more>summary .icon { width:16px; height:16px; }
+#item-more[open]>summary .icon { transform:rotate(180deg); }
+.stops-list,.stop-branches { margin:0; padding:0; list-style:none; }
+.stop-link { display:flex; justify-content:space-between; gap:9px; align-items:center; min-height:48px; padding:9px 0; color:inherit; text-decoration:none; border-bottom:1px solid var(--line); }
+.stop-link>span { min-width:0; }
+.stop-link strong,.stop-group strong { display:block; font-size:12px; font-weight:600; line-height:1.35; }
+.stop-link small,.stop-group small { display:block; font-size:10px; color:var(--muted); line-height:1.5; margin-top:3px; overflow-wrap:anywhere; }
+.stop-link .icon { width:14px; height:14px; color:var(--coral); }
+.stop-group { padding-top:12px; }
+.stop-branches { padding-left:12px; }
+html[data-theme=cobalt] #item-dialog { background:#f7f0e5; border-color:#fff6e9; }
+html[data-theme=cobalt] .stop-link .icon { color:var(--cobalt); }
+@media(max-width:350px) { #item-dialog { padding:18px; } .item-dialog-head h2 { font-size:21px; } }
