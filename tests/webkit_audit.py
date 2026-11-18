@@ -10,10 +10,14 @@ URL = 'http://127.0.0.1:4175/'
 FINITE = 'document.getAnimations().filter(a => isFinite(a.effect.getComputedTiming().endTime))'
 HOOK = """(() => {window.__starts=0; const o=document.startViewTransition?.bind(document);
 if(o) document.startViewTransition=cb=>{window.__starts++;return window.__t=o(cb)};})()"""
+SOURCE = json.loads(pathlib.Path('private/draft-source.json').read_text())
+assert SOURCE.get('mode') == 'published', 'Audit requires an actual saved Published snapshot'
+EXPECTED = [row for row in SOURCE['rows'][1:] if row[0]]
+CONFIRMED = sum(row[19] is True or row[19] == 'TRUE' for row in EXPECTED)
 OVERFLOW = """() => ({width:innerWidth, scroll:document.documentElement.scrollWidth,
 bad:[...document.querySelectorAll('main *')].filter(e=>{const r=e.getBoundingClientRect();
 return r.width && getComputedStyle(e).visibility!=='hidden' && (r.left < -1 || r.right > innerWidth+1)
-&& !e.closest('.sculpture')}).map(e=>e.tagName+'.'+e.className)})"""
+&& !e.closest('.date-strip')}).map(e=>e.tagName+'.'+e.className)})"""
 
 async def visible(page, name):
     await page.wait_for_function("n=>!document.querySelector('#'+n+'-view').hidden", arg=name)
@@ -21,16 +25,16 @@ async def visible(page, name):
     assert await page.locator('[aria-current=page]').get_attribute('data-view') == name
 
 async def frames(page):
-    await page.evaluate('window.__t=null')
     await page.tap('[data-view=budget]')
-    await page.wait_for_function('window.__t')
-    await page.evaluate('__t.ready')
+    await page.wait_for_function("document.querySelector('#screen').getAnimations().length>0")
     await page.evaluate(FINITE+'.forEach(a=>a.pause())')
     for ms in [0, 100, 200, 300]:
         await page.evaluate(FINITE+f'.forEach(a=>a.currentTime={ms})')
+        assert not await page.locator('#budget-view').is_hidden()
+        assert await page.locator('.budget-total').is_visible()
         await page.screenshot(path=str(OUT/f'frame-{ms}.png'))
     await page.evaluate(FINITE+'.forEach(a=>a.finish())')
-    await page.evaluate('__t.finished')
+
 
 async def main():
     OUT.mkdir(parents=True, exist_ok=True)
@@ -44,9 +48,10 @@ async def main():
             page.on('pageerror',lambda e:report['errors'].append(str(e)))
             await page.goto(URL+'#itinerary')
             await page.wait_for_selector('.card')
-            assert await page.locator('.card').count()==9
-            assert await page.locator('.card.confirmed').count()==3
-            assert await page.locator('.card.tentative').count()==6
+            assert await page.locator('.card').count()==len(EXPECTED)
+            assert await page.locator('.card.confirmed').count()==CONFIRMED
+            assert await page.locator('.card.tentative').count()==len(EXPECTED)-CONFIRMED
+            assert sorted(await page.locator('.card h3').all_text_contents())==sorted(row[0] for row in EXPECTED)
             for view in ['itinerary','budget','notes']:
                 await page.tap('[data-view='+view+']')
                 await visible(page,view)
@@ -57,7 +62,7 @@ async def main():
                 await page.screenshot(path=str(OUT/f'{width}-{height}-{view}.png'),full_page=True)
                 if view=='itinerary':
                     await page.screenshot(path=str(OUT/f'{width}-viewport.png'))
-            report['checks'].append(f'{width}x{height}: nine items, states, three views, overflow, screenshots')
+            report['checks'].append(f'{width}x{height}: {len(EXPECTED)} saved Published items, states, three views, overflow, screenshots')
             await ctx.close()
 
         ctx=await browser.new_context(**p.devices['iPhone 13'])

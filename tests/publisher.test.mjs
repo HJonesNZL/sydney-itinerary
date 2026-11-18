@@ -15,3 +15,5 @@ test('flexible arrival ideas follow timed flights on the same day',()=>{const fl
 test('native snapshot estimate prefixes accept optional whitespace',()=>{for(const value of ['≈24.49','≈ 24.49',' ≈\u00a024.49 ']){const r=row('native',false);r[4]=value;const item=fromRows([[],r])[0];assert.equal(item.cost,24.49);assert.equal(item.approx,true);}});
 test('native empty cost stays unknown rather than zero',()=>{const r=row('blank',true);r[4]=null;assert.equal(fromRows([[],r])[0].cost,undefined);});
 test('malformed published cost fails instead of rendering NaN',()=>{const r=row('bad',true);for(const value of ['≈invalid','≈','≈ -2']){r[4]=value;assert.throws(()=>fromRows([[],r]),/invalid cost/);}});
+
+test('flexible multi-day plans retain the end date without inventing an end time',()=>{const r=row('coast',false);r[2]='';r[17]='2030-01-03';const item=fromRows([[],...publish([r])])[0];assert.equal(item.endDate,'2030-01-03');assert.equal(item.end,'');assert.equal(item.untimed,true);});

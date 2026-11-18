@@ -38,3 +38,39 @@ One extra harness hook initially returned an assigned function; Playwright invok
 Native macOS Safari was separately checked through its UI: nine items, local flight times, confirmation labels, budget total, view changes, browser Back, motion toggle and expanded home-screen instructions. This is not an iPhone test.
 
 Still requires verification on a real iPhone: Safari touch/compositor behavior, standalone home-screen install, swipe-back, enlarged OS text/VoiceOver and frame-rate smoothness. Google-authenticated Sheet reads and private shareable hosting are separate unfinished setup; these local tests do not claim either.
+
+## Reference-led redesign continuation
+
+The schedule layout was redesigned using the supplied frosted UI and itinerary references, with the mood-journal image explicitly selected as the main palette. The audit derives expected activity titles/counts/states from the saved Published fixture. It allows horizontal scrolling only inside the date strip, while document width must still match the viewport.
+
+Additional interaction coverage:
+
+```sh
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.pw" .wk/bin/python tests/webkit_redesign.py
+```
+
+This checks fixed bottom navigation while scrolling, date jumps and history, ongoing multi-day plans, search/no-results/clear/Escape focus, flight timezones, narrow widths and larger-text stress. The larger-text check is a CSS stress test, not a VoiceOver or iPhone OS text-size certification. Reports and screenshots remain under ignored private/webkit-audit.
+
+The generic app icon can be regenerated from its SVG source:
+
+```sh
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.pw" .wk/bin/python scripts/build-icons.py
+```
+
+Palette switching has an additional suite:
+
+```sh
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.pw" .wk/bin/python tests/webkit_themes.py
+```
+
+It checks Cobalt in all three views at six viewport sizes, unchanged plan titles, keyboard switching, reload persistence, the isolated preference key, blocked storage and reduced motion. Evidence lives under ignored private/webkit-audit/themes. Native macOS Safari also verifies the control and colour change.
+
+Tactile motion coverage:
+
+```sh
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.pw" .wk/bin/python tests/webkit_motion.py
+```
+
+The suite records real animation-frame scroll positions and landing transforms in both themes, checks bounded overshoot and completion focus, interrupts journeys with touch and desktop wheel input, changes views mid-journey, holds/releases a button, and verifies instant reduced-motion navigation. Private evidence is under private/webkit-audit/motion. Mobile WebKit does not support Playwright mouse-wheel input; wheel cancellation is therefore tested in a desktop WebKit context, while touch cancellation is tested in the iPhone context.
+
+The latest motion pass uses live content entrances for every view change. This supersedes the earlier captured View Transition setup: frozen 100/200/300ms review exposed blank incoming content in WebKit, while the live entrance shows the destination immediately. The audit now freezes the actual live animations and asserts the new view and budget are visible. History restoration remains 950→950. Details keep stable height after a height-animation experiment shifted scroll anchoring.

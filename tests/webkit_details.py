@@ -15,6 +15,7 @@ async def main():
         assert await page.locator('details[open]').count()==2
         await page.set_viewport_size({'width':320,'height':568})
         await page.locator('summary').nth(1).scroll_into_view_if_needed()
+        await page.wait_for_timeout(220)
         await page.screenshot(path=str(out/'320-open-details.png'))
         assert await page.evaluate('document.documentElement.scrollWidth===innerWidth')
         # History navigation must rescue focus when its old screen becomes hidden.
@@ -32,8 +33,9 @@ async def main():
         await page.evaluate('document.getAnimations().filter(a=>isFinite(a.effect.getComputedTiming().endTime)).forEach(a=>{a.pause();a.currentTime=150})')
         await page.screenshot(path=str(out/'scrolled-transition-150.png'))
         await page.evaluate('document.getAnimations().filter(a=>isFinite(a.effect.getComputedTiming().endTime)).forEach(a=>a.finish())')
-        # Resize while the next real tap transition is still in progress.
+        # Resize while the next live entrance is still in progress.
         await page.tap('[data-view=notes]')
+        assert await page.locator('#screen').evaluate('(e)=>e.getAnimations().length>0')
         await page.set_viewport_size({'width':844,'height':390})
         await page.wait_for_timeout(400)
         assert not await page.locator('#notes-view').is_hidden()
@@ -41,7 +43,7 @@ async def main():
         await page.screenshot(path=str(out/'interrupted-landscape.png'))
         links=await page.locator('.card a').evaluate_all('(es)=>es.map(e=>({https:e.protocol==="https:",rel:e.rel}))')
         assert all(e['https'] and 'noopener' in e['rel'] for e in links)
-        report={'browser':b.version,'errors':errors,'checks':['expanded long notes at 320px without overflow','focus rescued to new heading on history navigation','scroll restoration uses live entrance, frozen at 150ms, no misplaced snapshot','landscape resize interrupts navigation safely','booking links HTTPS and noopener']}
+        report={'browser':b.version,'errors':errors,'checks':['expanded long notes at 320px without overflow','focus rescued to new heading on history navigation','scroll restoration uses live entrance, frozen at 150ms, no misplaced snapshot','landscape resize interrupts live navigation safely','booking links HTTPS and noopener']}
         (out/'details-report.json').write_text(json.dumps(report,indent=2));print(json.dumps(report,indent=2))
         await b.close()
         assert not errors
