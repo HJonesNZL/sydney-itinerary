@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fffafa"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Itinerary"><meta name="referrer" content="no-referrer">
+<script>
+try { if (localStorage.getItem('itinerary-colour-theme') === 'cobalt') document.documentElement.dataset.theme = 'cobalt'; } catch {}
+</script>
+<title>Sydney · Our itinerary</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=2026111906">
+<script type="module" src="app.js?v=2026111906"></script>
+</head><body>
+<div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+<main>
+<header class="hero">
+ <div class="hero-top"><div class="brand-group"><span class="brand-icon" data-icon="sun" aria-hidden="true"></span><button id="theme-toggle" class="theme-toggle" aria-pressed="false" aria-label="Switch to Cobalt and apricot palette"><span class="theme-swatches" aria-hidden="true"><i></i><i></i></span><span id="theme-name">Blush</span></button></div><span class="private-label"><span data-icon="lock" aria-hidden="true"></span> Our itinerary</span></div>
+ <div class="hero-title"><div><h1>Sydney.</h1><p id="trip-dates">Your days, together.</p></div><span class="hero-mark" data-icon="sparkles" aria-hidden="true"></span></div>
+</header>
+
+<div id="screen" tabindex="-1">
+<section id="itinerary-view" class="view" aria-labelledby="plan-title">
+ <div class="section-heading"><div><h2 id="plan-title">Your itinerary</h2></div><button id="search-toggle" class="icon-button" aria-label="Search itinerary" aria-expanded="false" aria-controls="search-panel"><span data-icon="search" aria-hidden="true"></span></button></div>
+ <div id="search-panel" hidden><label for="search">Find a plan</label><div class="search-field"><span data-icon="search" aria-hidden="true"></span><input id="search" type="search" placeholder="Activity, place or note" autocomplete="off"><button id="search-clear" class="icon-button" aria-label="Clear search"><span data-icon="close" aria-hidden="true"></span></button></div></div>
+ <nav id="date-strip" class="date-strip" aria-label="Jump to a trip day"></nav>
+ <div class="plan-overview"><span class="overview-icon" data-icon="route" aria-hidden="true"></span><div><strong id="overview-title">A little room to explore</strong><p id="overview-detail">Your saved plans, day by day.</p></div><span class="overview-art" aria-hidden="true"></span></div>
+ <p id="search-empty" class="search-empty" role="status" hidden>No matching plans. Try another search.</p><div id="plan"></div>
+</section>
+<section id="budget-view" class="view" aria-labelledby="budget-title"><div class="section-heading"><div><h2 id="budget-title">Trip budget</h2></div><span class="heading-icon" data-icon="wallet" aria-hidden="true"></span></div><div id="budget"></div></section>
+<section id="notes-view" class="view" aria-labelledby="notes-title"><div class="section-heading"><div><h2 id="notes-title">Trip notes</h2></div><span class="heading-icon" data-icon="notes" aria-hidden="true"></span></div><article class="info-card"><span class="info-icon" data-icon="sheet" aria-hidden="true"></span><h3>Google Sheet</h3><p>Plans update after the evening or requested publish. Unpublished changes stay in the private Sheet.</p><a id="edit" hidden target="_blank" rel="noopener">Open Google Sheet <span data-icon="arrow" aria-hidden="true"></span></a></article><details class="help"><summary><span data-icon="phone" aria-hidden="true"></span> Add to your home screen <span class="disclosure-icon" data-icon="chevron" aria-hidden="true"></span></summary><div><p>In iPhone Safari, tap Share, then Add to Home Screen. Open the new icon whenever you need your plan.</p><p>Saved plans can open offline after opening online once. Maps links and new forecasts may need a connection.</p></div></details><div class="motion-setting"><span><strong>Gentle motion</strong><small>Soft transitions between views</small></span><button id="motion" class="quiet" aria-pressed="false">Use less motion</button></div><p class="privacy-note"><span data-icon="lock" aria-hidden="true"></span> Clear saved removes the itinerary from this browser.</p><p class="weather-source"><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Weather: Open-Meteo</a><span id="forecast-asof"></span></p></section>
+</div>
+<footer class="connection-footer">
+<section class="connection" aria-label="Published itinerary"><button id="connect" class="primary">Open itinerary <span data-icon="arrow" aria-hidden="true"></span></button><button id="refresh" hidden><span data-icon="refresh" aria-hidden="true"></span> Refresh</button><button id="signout" class="quiet" hidden>Sign out</button></section>
+ <p id="status" class="status" role="status" aria-live="polite">Sample preview · open published itinerary</p>
+</footer>
+</main>
+<dialog id="item-dialog" aria-labelledby="item-dialog-title"><div class="item-dialog-head"><h2 id="item-dialog-title"></h2><button id="item-dialog-close" class="icon-button" aria-label="Close item"><span data-icon="close" aria-hidden="true"></span></button></div><p id="item-dialog-meta" class="status"></p><details id="item-more"><summary>More details <span data-icon="chevron" aria-hidden="true"></span></summary><div id="item-stops"></div></details></dialog>
+<nav class="view-nav" aria-label="Itinerary sections"><button data-view="itinerary" aria-current="page"><span data-icon="calendar" aria-hidden="true"></span><span>Itinerary</span></button><button data-view="budget"><span data-icon="wallet" aria-hidden="true"></span><span>Budget</span></button><button data-view="notes"><span data-icon="notes" aria-hidden="true"></span><span>Notes</span></button></nav>
+</body></html>
