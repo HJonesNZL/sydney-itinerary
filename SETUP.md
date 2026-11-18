@@ -8,7 +8,7 @@ A buildless mobile web app. `web/` contains only safe sample content and public 
 
 ## GitHub and Google setup
 
-1. Inspect the verified personal GitHub browser session after the Mac is unlocked; the connected app currently exposes no repository and the CLI login is invalid. Henry may restore his own login if needed. Create a dedicated repository only after checking the audience and reviewing staged files. Never add `private/` or `.env` files.
+1. The personal account HJonesNZL is verified, including an existing signed-in GitHub Desktop session inspected19November. The CLI login remains invalid. Local source is committed, but no remote repository exists yet. Desktop's repository dialog could not be reliably operated through automation. Use that existing session to add this local repository and publish a private code repository; never add `private/`, `.wk/`, `.pw/` or `.env` files. Review audience before enabling Pages, which must contain only the generic shell.
 2. Publish `web/` using GitHub Pages. A private repository does not automatically make its Pages site private. This project permits only the generic app shell to be public; actual Sheet values must remain behind Google authorization.
 3. In Google Cloud, first inspect and safely reuse an existing authorized OAuth Web client. Creating new credentials is blocked under the current instructions and requires Henry’s explicit authorization. The eventual configuration needs Sheets API and a Web client with the exact GitHub Pages HTTPS origin as an authorized JavaScript origin. For testing, also allow http://127.0.0.1:4173 and add each verified Google account as an OAuth test user. An external testing consent screen may have access limits; prepare production consent before relying on it for a long trip.
 4. Set the public OAuth client ID and private spreadsheet ID in `web/config.js`. Client IDs and Sheet IDs are identifiers, not credentials. Never put a client secret, service-account key, refresh token, or bearer token in a repository or frontend.
@@ -28,7 +28,7 @@ Columns: Activity, Date, Start, End, Cost NZD, Location, Transport, Booking/Map 
 
 ## Remaining verification
 
-The first nightly private Sheet snapshot and its retained backup have been independently read back and compared with the production calculation. GitHub deployment, browser OAuth, authenticated Safari refresh and iPhone installation still require verification after setup. No published app URL exists yet. Local preview contains sample content only.
+The first nightly private Sheet snapshot and its retained backup have been independently read back and compared with the production calculation. Rebuilt WebKit26.4 tests and native macOS Safari checks now pass as described in WEBKIT-TESTING.md. GitHub deployment, browser OAuth, authenticated Safari refresh and real iPhone installation still require verification. No published app URL exists yet. Generic web/ contains sample content; ignored private/draft contains the actual saved snapshot and is localhost-only.
 
 ## Minimal handoff after connection checks
 
